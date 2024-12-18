@@ -4,7 +4,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from src.types.training_metrics import TrainingMetrics
+from src.types import TrainingMetrics
+from src.utils import move_batch_to_device
 
 
 def validation_step(
@@ -23,14 +24,16 @@ def validation_step(
     model.to(device)
     model.eval()
     with torch.inference_mode():
-        for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
-            output = model(X)
-            loss = loss_fn(output, y)
+        for batch in dataloader:
+            *inputs, targets = move_batch_to_device(batch, device)
+            outputs = (
+                model(**inputs[0]) if isinstance(inputs[0], dict) else model(*inputs)
+            )
+            loss = loss_fn(outputs, targets)
 
             val_loss += loss.item()
             for metric_name, metric_fn in metrics_items:
-                val_metrics[metric_name] += metric_fn(output, y).item()
+                val_metrics[metric_name] += metric_fn(outputs, targets).item()
 
         val_loss /= len(dataloader)
         for metric_name, _ in val_metrics:

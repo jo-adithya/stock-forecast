@@ -5,7 +5,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
-from src.types.training_metrics import TrainingMetrics
+from src.types import TrainingMetrics
+from src.utils import move_batch_to_device
 
 
 def train_step(
@@ -27,25 +28,25 @@ def train_step(
 
     model.to(device)
     model.train()
-    for batch, (X, y) in enumerate(train_progress):
+    for batch_idx, batch in enumerate(train_progress):
         # Forward pass
-        X, y = X.to(device), y.to(device)
-        y_pred = model(X)
+        *inputs, targets = move_batch_to_device(batch, device)
+        outputs = model(**inputs[0]) if isinstance(inputs[0], dict) else model(*inputs)
         optimizer.zero_grad()
-        loss = loss_fn(y_pred, y)
+        loss = loss_fn(outputs, targets)
         loss.backward()
         optimizer.step()
 
         # Update metrics
         train_loss += loss.item()
         for key, metric_fn in metrics_items:
-            train_metrics[key] += metric_fn(y_pred, y).item()
+            train_metrics[key] += metric_fn(outputs, targets).item()
 
         # Update progress bar
         train_progress.set_postfix(
             {
-                "Train Loss": train_loss / (batch + 1),
-                **average_metrics(train_metrics, batch + 1),
+                "Train Loss": train_loss / (batch_idx + 1),
+                **average_metrics(train_metrics, batch_idx + 1),
             }
         )
 

@@ -1,11 +1,13 @@
 from typing import Optional
+
 import torch
-from src.core import train_step, validation_step
-from src.types import TrainingHistory, TrainingMetrics
-from src.utils import EarlyStopping
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+
+from src.core import train_step, validation_step
+from src.types import TrainingHistory, TrainingMetrics
+from src.utils import EarlyStopping
 
 
 def train_model(
